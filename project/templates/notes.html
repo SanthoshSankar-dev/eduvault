@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Notes - Notes App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <div class="logo-box">📚</div>
+                <h1>EduVault</h1>
+            </div>
+            <ul class="navbar-menu">
+                <li><a href="/" class="active">View Notes</a></li>
+                <li><a href="/upload">Upload Notes</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Search Bar -->
+        <div class="search-section">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="search-bar" 
+                    placeholder="🔍 Search by subject or title..."
+                >
+                <button id="searchBtn" class="btn btn-search">Search</button>
+                <button id="clearBtn" class="btn btn-clear" style="display: none;">Clear</button>
+            </div>
+            <p class="search-info">Found <span id="notesCount">0</span> notes</p>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading notes...</p>
+        </div>
+
+        <!-- Notes Table View -->
+        <div id="notesTableContainer" class="notes-table-container" style="display: none;">
+            <table class="notes-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Title</th>
+                        <th>Description</th>
+                        <th>Upload Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="notesTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Notes Card View (Mobile) -->
+        <div id="notesCardContainer" class="notes-card-container" style="display: none;">
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📝</div>
+            <h2>No Notes Found</h2>
+            <p>There are no notes uploaded yet. <a href="/upload">Upload your first note!</a></p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="alert alert-error" style="display: none;">
+            <strong>Error!</strong> <span id="errorText"></span>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 Notes Upload App. All rights reserved.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        let allNotes = [];
+
+        // Load notes on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadNotes();
+        });
+
+        // Search functionality
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            const searchQuery = document.getElementById('searchInput').value.trim();
+            if (searchQuery) {
+                searchNotes(searchQuery);
+                document.getElementById('clearBtn').style.display = 'inline-block';
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearBtn').style.display = 'none';
+            loadNotes();
+        });
+
+        // Allow search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('searchBtn').click();
+            }
+        });
+
+        async function loadNotes() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('notesTableContainer').style.display = 'none';
+            document.getElementById('notesCardContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/notes');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load notes');
+                }
+
+                allNotes = await response.json();
+                displayNotes(allNotes);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('errorText').textContent = 'Failed to load notes. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        async function searchNotes(query) {
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('notesTableContainer').style.display = 'none';
+            document.getElementById('notesCardContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+
+            try {
+                const response = await fetch(`/api/notes?search=${encodeURIComponent(query)}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to search notes');
+                }
+
+                const results = await response.json();
+                displayNotes(results);
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('errorText').textContent = 'Failed to search notes. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        function displayNotes(notes) {
+            document.getElementById('notesCount').textContent = notes.length;
+
+            if (notes.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            // Display as table on desktop
+            if (window.innerWidth > 768) {
+                displayAsTable(notes);
+            } else {
+                displayAsCards(notes);
+            }
+        }
+
+        function displayAsTable(notes) {
+            const tbody = document.getElementById('notesTableBody');
+            tbody.innerHTML = '';
+
+            notes.forEach(note => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="subject-cell">${escapeHtml(note.subject)}</td>
+                    <td class="title-cell">${escapeHtml(note.title)}</td>
+                    <td class="description-cell">${escapeHtml(note.description || 'N/A')}</td>
+                    <td class="date-cell">${formatDate(note.upload_date)}</td>
+                    <td class="actions-cell">
+                        <a href="/api/download/${note.id}" class="btn btn-small btn-download" title="Download note">
+                            📥 Download
+                        </a>
+                        <button class="btn btn-small btn-delete" onclick="deleteNote(${note.id})" title="Delete note">
+                            🗑️ Delete
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('notesTableContainer').style.display = 'block';
+        }
+
+        function displayAsCards(notes) {
+            const container = document.getElementById('notesCardContainer');
+            container.innerHTML = '';
+
+            notes.forEach(note => {
+                const card = document.createElement('div');
+                card.className = 'note-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h3>${escapeHtml(note.subject)}</h3>
+                        <span class="date-badge">${formatDate(note.upload_date)}</span>
+                    </div>
+                    <div class="card-body">
+                        <h4>${escapeHtml(note.title)}</h4>
+                        <p>${escapeHtml(note.description || 'No description provided')}</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/api/download/${note.id}" class="btn btn-small btn-download">📥 Download</a>
+                        <button class="btn btn-small btn-delete" onclick="deleteNote(${note.id})">🗑️ Delete</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('notesCardContainer').style.display = 'block';
+        }
+
+        async function deleteNote(id) {
+            if (!confirm('Are you sure you want to delete this note?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/delete/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadNotes();
+                } else {
+                    const data = await response.json();
+                    alert('Error deleting note: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error deleting note');
+            }
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Handle responsive view changes
+        window.addEventListener('resize', function() {
+            if (allNotes.length > 0) {
+                displayNotes(allNotes);
+            }
+        });
+    </script>
+</body>
+</html>

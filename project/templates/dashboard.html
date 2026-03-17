@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - EduVault College Notes Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <div class="logo-box">📖</div>
+                <h1>EduVault</h1>
+            </div>
+            
+            <ul class="navbar-menu">
+                <li><a href="/dashboard" class="active">Home</a></li>
+                <li><a href="/upload-notes">Upload Notes</a></li>
+                <li><a href="/view-notes">View Notes</a></li>
+                <li><a href="/view-notes">Search Notes</a></li>
+            </ul>
+
+            <div class="navbar-right">
+                <div class="navbar-user">
+                    <a href="/profile" class="navbar-avatar" id="studentProfile">ST</a>
+                    <div class="dropdown-menu">
+                        <a href="/profile" class="dropdown-item">👤 Profile</a>
+                        <a href="/dashboard" class="dropdown-item">🏠 Dashboard</a>
+                        <a href="#" onclick="event.preventDefault(); logout();" class="dropdown-item" style="color: #dc2626;">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Welcome Section -->
+    <section class="welcome-section">
+        <div class="welcome-content">
+            <h1>Welcome back, <span id="welcomeName">Student</span>! 👋</h1>
+            <p>Manage your study notes efficiently with EduVault</p>
+            <div class="welcome-actions">
+                <a href="/upload-notes" class="btn btn-lg">
+                    📤 Upload Notes
+                </a>
+                <a href="/view-notes" class="btn btn-lg">
+                    📚 Browse Notes
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="dashboard-container">
+        <!-- Quick Stats -->
+        <section class="cards-grid two-columns mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">📊 Your Statistics</h4>
+                </div>
+                <div class="card-body">
+                    <p><strong>Total Notes Uploaded:</strong> <span id="totalNotes">0</span></p>
+                    <p><strong>Subjects Covered:</strong> <span id="totalSubjects">0</span></p>
+                    <p><strong>Last Upload:</strong> <span id="lastUpload">—</span></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">⚡ Quick Actions</h4>
+                </div>
+                <div class="card-body">
+                    <p>✅ Upload your first note</p>
+                    <p>✅ Share notes with classmates</p>
+                    <p>⏳ Rate and review notes</p>
+                    <p>⏳ Create note collections</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recently Uploaded Notes -->
+        <section>
+            <div class="page-header">
+                <h2>Recently Uploaded Notes</h2>
+                <p>Your recent uploads and popular notes in your subjects</p>
+            </div>
+
+            <div class="cards-grid" id="recentNotesGrid">
+                <!-- Dynamic content loaded here -->
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-icon">📝</div>
+                    <h3>No Notes Yet</h3>
+                    <p>Start by uploading your study notes to share with other students.</p>
+                    <a href="/upload-notes" class="btn btn-primary">Upload Your First Note</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Popular Subjects -->
+        <section style="margin-top: 3rem;">
+            <div class="page-header">
+                <h2>Popular Subjects</h2>
+                <p>Browse notes by subject</p>
+            </div>
+
+            <div class="cards-grid" id="subjectsGrid">
+                <!-- Dynamically loaded subjects -->
+                <div class="empty-state" style="grid-column: 1 / -1; padding: 3rem;">
+                    <p>No subjects with notes yet. Upload your first note to see subjects!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tips Section -->
+        <section style="margin-top: 3rem; margin-bottom: 3rem;">
+            <div class="page-header">
+                <h2>💡 Tips for Success</h2>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Organize Your Notes</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Keep your notes organized by subject and semester for better accessibility.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Share Knowledge</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Upload your notes to help other students and contribute to the learning community.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Stay Updated</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Check regularly for new notes from your classmates and instructors.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Update welcome name
+            const studentName = localStorage.getItem('studentName') || 'Student';
+            document.getElementById('welcomeName').textContent = studentName.split('@')[0];
+
+            // Load recent notes
+            try {
+                const notes = await fetchNotes();
+                const recentNotes = notes.slice(0, 3);
+                const container = document.getElementById('recentNotesGrid');
+
+                if (recentNotes.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-icon">📝</div>
+                            <h3>No Notes Yet</h3>
+                            <p>Start by uploading your study notes to share with other students.</p>
+                            <a href="/upload-notes" class="btn btn-primary">Upload Your First Note</a>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = recentNotes.map(note => `
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">${escapeHtml(note.subject)}</div>
+                                <div class="card-subtitle">${escapeHtml(note.title)}</div>
+                            </div>
+                            <div class="card-body">
+                                <p>${escapeHtml(truncateText(note.description || 'No description', 80))}</p>
+                                <div class="meta">
+                                    <span>📅 ${formatDate(note.upload_date)}</span>
+                                </div>
+                            </div>
+                            <div style="padding: 1rem 1.5rem; background-color: #F3F4F6; border-top: 1px solid #E5E7EB;">
+                                <a href="/api/download/${note.id}" class="btn btn-sm btn-primary">📥 Download</a>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading recent notes:', error);
+            }
+        });
+
+        // Load current student info
+        async function loadStudentInfo() {
+            try {
+                const response = await fetch('/api/current-student');
+                if (response.ok) {
+                    const student = await response.json();
+                    const firstName = student.name.split(' ')[0];
+                    document.getElementById('welcomeName').textContent = firstName;
+                    document.getElementById('studentName').textContent = student.name;
+                    
+                    // Update profile avatar with initials
+                    const initials = student.name.split(' ').map(n => n[0]).join('');
+                    document.getElementById('studentProfile').textContent = initials.substring(0, 2);
+                }
+            } catch (error) {
+                console.error('Error loading student info:', error);
+            }
+        }
+
+        loadStudentInfo();
+
+        // Load student statistics
+        async function loadStudentStats() {
+            try {
+                const response = await fetch('/api/student-stats');
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('totalNotes').textContent = stats.total_notes;
+                    document.getElementById('totalSubjects').textContent = stats.unique_subjects;
+                    
+                    if (stats.last_upload) {
+                        const date = new Date(stats.last_upload);
+                        document.getElementById('lastUpload').textContent = date.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    } else {
+                        document.getElementById('lastUpload').textContent = '—';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        loadStudentStats();
+
+        // Load subjects with real counts
+        async function loadSubjects() {
+            try {
+                const response = await fetch('/api/subject-stats');
+                if (response.ok) {
+                    const subjects = await response.json();
+                    const grid = document.getElementById('subjectsGrid');
+                    
+                    if (subjects.length === 0) {
+                        grid.innerHTML = '<div class="empty-state" style="grid-column: 1 / -1; padding: 3rem;"><p>No subjects with notes yet. Upload your first note to see subjects!</p></div>';
+                        return;
+                    }
+                    
+                    const emojis = ['📐', '🔬', '🧪', '🌍', '💻', '📚'];
+                    grid.innerHTML = subjects.map((subject, idx) => `
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">${emojis[idx % emojis.length]} ${escapeHtml(subject.subject)}</div>
+                                <div class="card-subtitle">${subject.count} note${subject.count !== 1 ? 's' : ''} available</div>
+                            </div>
+                            <div class="card-body">
+                                <div class="meta" style="margin-top: 1.5rem;">
+                                    <a href="/view-notes?search=${encodeURIComponent(subject.subject)}" class="btn btn-sm btn-primary">View Notes</a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+            }
+        }
+
+        loadSubjects();
+
+        // Logout function
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Improved dropdown menu behavior
+        const navbarUser = document.querySelector('.navbar-user');
+        const dropdownMenu = document.querySelector('.dropdown-menu');
+        let closeTimeout;
+
+        if (navbarUser && dropdownMenu) {
+            navbarUser.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                dropdownMenu.style.display = 'block';
+            });
+
+            navbarUser.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 100);
+            });
+
+            dropdownMenu.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                dropdownMenu.style.display = 'block';
+            });
+
+            dropdownMenu.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 100);
+            });
+
+            // Handle dropdown item clicks
+            const dropdownItems = dropdownMenu.querySelectorAll('a');
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    dropdownMenu.style.display = 'none';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

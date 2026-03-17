@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Notes - EduVault College Notes Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <div class="logo-box">📖</div>
+                <h1>EduVault</h1>
+            </div>
+            
+            <ul class="navbar-menu">
+                <li><a href="/dashboard">Home</a></li>
+                <li><a href="/upload-notes">Upload Notes</a></li>
+                <li><a href="/view-notes" class="active">View Notes</a></li>
+                <li><a href="/view-notes">Search Notes</a></li>
+            </ul>
+
+            <div class="navbar-right">
+                <div class="navbar-user">
+                    <a href="/profile" class="navbar-avatar" id="studentProfile">ST</a>
+                    <div class="dropdown-menu">
+                        <a href="/profile" class="dropdown-item">👤 Profile</a>
+                        <a href="/dashboard" class="dropdown-item">🏠 Dashboard</a>
+                        <a href="#" onclick="event.preventDefault(); logout();" class="dropdown-item" style="color: #dc2626;">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="notes-container">
+        <div class="page-header">
+            <h1>📚 Browse & Search Notes</h1>
+            <p>Find study notes shared by your classmates and instructors</p>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section">
+            <div class="search-wrapper">
+                <div class="search-input">
+                    <input 
+                        type="text" 
+                        id="noteSearch"
+                        placeholder="🔍 Search by subject, title, or keywords..."
+                    >
+                </div>
+                <div class="search-controls">
+                    <button id="searchBtn" class="btn btn-primary btn-sm">Search</button>
+                    <button id="clearSearch" class="btn btn-secondary btn-sm" style="display: none;">Clear</button>
+                </div>
+            </div>
+
+            <div class="notes-stats">
+                <div class="stat">
+                    <span>📊 Total:</span>
+                    <span class="stat-number" id="totalNotes">0</span>
+                    <span>notes</span>
+                </div>
+                <div id="notesStats"></div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingContainer" class="loading-container" style="display: none;">
+            <div class="loader"></div>
+            <p>Loading notes...</p>
+        </div>
+
+        <!-- Notes Grid -->
+        <div id="notesGrid" class="notes-grid">
+            <!-- Dynamic content loaded here -->
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <footer style="background-color: #1F2937; color: white; padding: 2rem; margin-top: 4rem; text-align: center;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <p>&copy; 2026 EduVault - College Notes Portal. All rights reserved.</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #9CA3AF;">
+                Share knowledge, Learn together, Succeed always 📚✨
+            </p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize search
+            initializeSearch();
+
+            // Load total notes count
+            try {
+                const allNotes = await fetchNotes();
+                document.getElementById('totalNotes').textContent = allNotes.length;
+            } catch (error) {
+                console.error('Error loading notes count:', error);
+            }
+        });
+
+        /**
+         * Custom search initialization for this page
+         */
+        function initializeSearch() {
+            const searchInput = document.getElementById('noteSearch');
+            const clearBtn = document.getElementById('clearSearch');
+            const searchBtn = document.getElementById('searchBtn');
+            const loadingContainer = document.getElementById('loadingContainer');
+
+            if (!searchInput) return;
+
+            let allNotes = [];
+
+            // Load all notes on init
+            loadAllNotes();
+
+            async function loadAllNotes() {
+                loadingContainer.style.display = 'block';
+                try {
+                    allNotes = await fetchNotes();
+                    displayNotes(allNotes);
+                } catch (error) {
+                    showNotification('Failed to load notes', 'error');
+                } finally {
+                    loadingContainer.style.display = 'none';
+                }
+            }
+
+            // Search handler with debounce
+            const handleSearch = debounce(async () => {
+                const query = searchInput.value.trim();
+                
+                if (query) {
+                    loadingContainer.style.display = 'block';
+                    try {
+                        const results = await fetchNotes(query);
+                        displayNotes(results);
+                        if (clearBtn) clearBtn.style.display = 'inline-block';
+                    } catch (error) {
+                        showNotification('Search failed', 'error');
+                    } finally {
+                        loadingContainer.style.display = 'none';
+                    }
+                } else {
+                    displayNotes(allNotes);
+                    if (clearBtn) clearBtn.style.display = 'none';
+                }
+                
+                // Update total count
+                const container = document.getElementById('notesGrid');
+                const cards = container.querySelectorAll('.note-card');
+                document.getElementById('totalNotes').textContent = cards.length;
+            }, 300);
+
+            searchInput.addEventListener('input', handleSearch);
+            
+            if (searchBtn) {
+                searchBtn.addEventListener('click', handleSearch);
+            }
+
+            // Clear search
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    displayNotes(allNotes);
+                    clearBtn.style.display = 'none';
+                    document.getElementById('totalNotes').textContent = allNotes.length;
+                });
+            }
+
+            // Search on Enter key
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            });
+        }
+
+        /**
+         * Enhanced display function with modern styling
+         */
+        function displayNotes(notes) {
+            const container = document.getElementById('notesGrid');
+            const stats = document.getElementById('notesStats');
+
+            if (!container) return;
+
+            if (notes.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-icon">🔍</div>
+                        <h3>No Notes Found</h3>
+                        <p>No notes match your search criteria. Try searching with different keywords or browse all available notes.</p>
+                        <a href="/upload-notes" class="btn btn-primary" style="margin-top: 1rem;">Upload Your Notes</a>
+                    </div>
+                `;
+                if (stats) {
+                    stats.innerHTML = '';
+                }
+                return;
+            }
+
+            container.innerHTML = notes.map(note => `
+                <div class="note-card">
+                    <div class="note-card-header">
+                        <div class="note-subject">${escapeHtml(note.subject)}</div>
+                        <div class="note-title">${escapeHtml(note.title)}</div>
+                    </div>
+                    <div class="note-card-body">
+                        <p class="note-description">
+                            ${escapeHtml(truncateText(note.description || 'No description provided', 150))}
+                        </p>
+                        <div class="note-meta">
+                            <div class="note-date">
+                                <span>📅</span>
+                                <span>${formatDate(note.upload_date)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="note-card-footer">
+                        <a href="/api/download/${note.id}" class="btn btn-sm btn-primary">
+                            📥 Download
+                        </a>
+                        <button class="btn btn-sm btn-danger" onclick="handleDeleteNote(${note.id})">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            if (stats) {
+                stats.innerHTML = `<div class="stat"><span class="stat-number">${notes.length}</span> result${notes.length !== 1 ? 's' : ''}</div>`;
+            }
+        }
+
+        // Load current student info
+        async function loadStudentInfo() {
+            try {
+                const response = await fetch('/api/current-student');
+                if (response.ok) {
+                    const student = await response.json();
+                    document.getElementById('studentName').textContent = student.name;
+                    
+                    const initials = student.name.split(' ').map(n => n[0]).join('');
+                    document.getElementById('studentProfile').textContent = initials.substring(0, 2);
+                }
+            } catch (error) {
+                console.error('Error loading student info:', error);
+            }
+        }
+
+        loadStudentInfo();
+
+        // Logout function
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Improved dropdown menu behavior
+        const navbarUser = document.querySelector('.navbar-user');
+        const dropdownMenu = document.querySelector('.dropdown-menu');
+        let closeTimeout;
+
+        if (navbarUser && dropdownMenu) {
+            navbarUser.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                dropdownMenu.style.display = 'block';
+            });
+
+            navbarUser.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 100);
+            });
+
+            dropdownMenu.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                dropdownMenu.style.display = 'block';
+            });
+
+            dropdownMenu.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 100);
+            });
+
+            // Handle dropdown item clicks
+            const dropdownItems = dropdownMenu.querySelectorAll('a');
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    dropdownMenu.style.display = 'none';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

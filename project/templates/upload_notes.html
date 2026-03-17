@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Notes - EduVault College Notes Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <div class="logo-box">📖</div>
+                <h1>EduVault</h1>
+            </div>
+            
+            <ul class="navbar-menu">
+                <li><a href="/dashboard">Home</a></li>
+                <li><a href="/upload-notes" class="active">Upload Notes</a></li>
+                <li><a href="/view-notes">View Notes</a></li>
+                <li><a href="/view-notes">Search Notes</a></li>
+            </ul>
+
+            <div class="navbar-right">
+                <div class="navbar-user">
+                    <a href="/profile" class="navbar-avatar" id="studentProfile">ST</a>
+                    <div class="dropdown-menu">
+                        <a href="/profile" class="dropdown-item">👤 Profile</a>
+                        <a href="/dashboard" class="dropdown-item">🏠 Dashboard</a>
+                        <a href="#" onclick="event.preventDefault(); logout();" class="dropdown-item" style="color: #dc2626;">🚪 Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="notes-container">
+        <div class="page-header">
+            <h1>📤 Upload Your Notes</h1>
+            <p>Share your study notes with fellow students</p>
+        </div>
+
+        <!-- Upload Form -->
+        <div class="card" style="max-width: 700px; margin: 0 auto;">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="card-header">
+                    <h3 class="card-title">Share Your Knowledge</h3>
+                    <p class="card-subtitle">Fill in the details below to upload your notes</p>
+                </div>
+
+                <div class="card-body" style="padding: 2rem;">
+                    <!-- Subject -->
+                    <div class="form-group">
+                        <label for="subject">
+                            📚 Subject Name <span style="color: #EF4444;">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="subject" 
+                            name="subject"
+                            placeholder="e.g., Mathematics, Physics, History"
+                            required
+                        >
+                        <small style="color: #6B7280;">Enter the subject of your notes</small>
+                    </div>
+
+                    <!-- Semester (Additional field) -->
+                    <div class="form-group">
+                        <label for="semester">
+                            📅 Semester
+                        </label>
+                        <select id="semester" name="semester">
+                            <option value="">Select a semester</option>
+                            <option value="1st Semester">1st Semester</option>
+                            <option value="2nd Semester">2nd Semester</option>
+                            <option value="3rd Semester">3rd Semester</option>
+                            <option value="4th Semester">4th Semester</option>
+                            <option value="5th Semester">5th Semester</option>
+                            <option value="6th Semester">6th Semester</option>
+                            <option value="7th Semester">7th Semester</option>
+                            <option value="8th Semester">8th Semester</option>
+                        </select>
+                    </div>
+
+                    <!-- Department (Additional field) -->
+                    <div class="form-group">
+                        <label for="department">
+                            🏢 Department
+                        </label>
+                        <select id="department" name="department">
+                            <option value="">Select a department</option>
+                            <option value="Computer Science">Computer Science</option>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Science">Science</option>
+                            <option value="Arts">Arts</option>
+                            <option value="Commerce">Commerce</option>
+                            <option value="Medical">Medical</option>
+                            <option value="Law">Law</option>
+                        </select>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label for="title">
+                            📝 Note Title <span style="color: #EF4444;">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="title" 
+                            name="title"
+                            placeholder="e.g., Chapter 5 - Quadratic Equations"
+                            required
+                        >
+                        <small style="color: #6B7280;">Give your notes a descriptive title</small>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="description">
+                            📄 Description
+                        </label>
+                        <textarea 
+                            id="description" 
+                            name="description"
+                            placeholder="Describe the content of your notes... (optional)"
+                        ></textarea>
+                        <small style="color: #6B7280;">Help other students understand what's in your notes</small>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="form-group">
+                        <label for="noteFile">
+                            📎 Upload File <span style="color: #EF4444;">*</span>
+                        </label>
+                        <div class="file-input-wrapper" onclick="document.getElementById('noteFile').click()">
+                            <label for="noteFile" class="file-input-label">
+                                <div class="file-icon">📁</div>
+                                <div class="file-input-text" id="fileInputText">Click to upload or drag and drop</div>
+                                <div class="file-input-hint">PDF or DOC (Max 50MB)</div>
+                            </label>
+                            <input 
+                                type="file" 
+                                id="noteFile" 
+                                name="file"
+                                accept=".pdf,.doc,.docx,.txt"
+                                required
+                            >
+                        </div>
+                        <small style="color: #6B7280; display: block; margin-top: 0.5rem;">
+                            Supported formats: PDF, DOC, DOCX, TXT | Maximum size: 50MB
+                        </small>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div style="margin-top: 2rem;">
+                        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+                            🚀 Upload Notes
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="card-footer">
+                <p style="font-size: 0.85rem; color: #6B7280;">
+                    💡 <strong>Tip:</strong> Make sure your notes are well-organized and clearly written before uploading. 
+                    Other students will appreciate quality notes!
+                </p>
+            </div>
+        </div>
+
+        <!-- Info Cards -->
+        <div style="margin-top: 3rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2>✨ Why Upload Your Notes?</h2>
+            </div>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">🤝 Help Your Peers</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Share your knowledge and help other students succeed in their studies.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">⭐ Build Your Reputation</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Become known for quality notes and earn recognition from your classmates.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">💾 Save Your Work</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>Safely store your notes on EduVault and access them anytime, anywhere.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        // File drag and drop
+        const fileInput = document.getElementById('noteFile');
+        const fileWrapper = document.querySelector('.file-input-wrapper');
+        const fileInputText = document.getElementById('fileInputText');
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        fileWrapper.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileWrapper.style.borderColor = '#3B82F6';
+            fileWrapper.style.backgroundColor = 'rgba(37, 99, 235, 0.15)';
+        });
+
+        fileWrapper.addEventListener('dragleave', () => {
+            fileWrapper.style.borderColor = '#2563EB';
+            fileWrapper.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
+        });
+
+        fileWrapper.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileWrapper.style.borderColor = '#2563EB';
+            fileWrapper.style.backgroundColor = 'rgba(37, 99, 235, 0.05)';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                fileInputText.textContent = file.name;
+            }
+        }
+
+        // Load current student info
+        async function loadStudentInfo() {
+            try {
+                const response = await fetch('/api/current-student');
+                if (response.ok) {
+                    const student = await response.json();
+                    document.getElementById('studentName').textContent = student.name;
+                    
+                    const initials = student.name.split(' ').map(n => n[0]).join('');
+                    document.getElementById('studentProfile').textContent = initials.substring(0, 2);
+                }
+            } catch (error) {
+                console.error('Error loading student info:', error);
+            }
+        }
+
+        loadStudentInfo();
+
+        // Logout function
+        async function logout() {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Improved dropdown menu behavior
+        const navbarUser = document.querySelector('.navbar-user');
+        const dropdownMenu = document.querySelector('.dropdown-menu');
+        let closeTimeout;
+
+        if (navbarUser && dropdownMenu) {
+            navbarUser.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                dropdownMenu.style.display = 'block';
+            });
+
+            navbarUser.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 100);
+            });
+
+            dropdownMenu.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                dropdownMenu.style.display = 'block';
+            });
+
+            dropdownMenu.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    dropdownMenu.style.display = 'none';
+                }, 100);
+            });
+
+            // Handle dropdown item clicks
+            const dropdownItems = dropdownMenu.querySelectorAll('a');
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    dropdownMenu.style.display = 'none';
+                });
+            });
+        }
+    </script>
+</body>
+</html>
