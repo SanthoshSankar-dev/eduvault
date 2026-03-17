@@ -2,24 +2,29 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import mysql.connector
 import os
 
-app = Flask(__name__)
+# ✅ FIXED: tell Flask where templates & static are
+app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = "secret123"   # change later
 
 # ---------------- DB CONNECTION ----------------
 def get_db_connection():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        port=int(os.getenv("DB_PORT", 3306)),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME"),
-        ssl_verify_cert=False
-    )
+    try:
+        return mysql.connector.connect(
+            host=os.getenv("DB_HOST"),
+            port=int(os.getenv("DB_PORT", 3306)),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASS"),
+            database=os.getenv("DB_NAME"),
+            ssl_disabled=False   # for Aiven
+        )
+    except Exception as e:
+        print("DB ERROR:", e)
+        return None
 
 # ---------------- HOME ----------------
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return redirect("/login")   # ✅ no index.html error
 
 # ---------------- REGISTER ----------------
 @app.route("/register", methods=["POST"])
@@ -34,6 +39,9 @@ def register():
         semester = data.get("semester")
 
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"status": "error", "message": "DB connection failed"})
+
         cursor = conn.cursor()
 
         query = """
@@ -53,8 +61,13 @@ def register():
         return jsonify({"status": "error", "message": str(e)})
 
 # ---------------- LOGIN ----------------
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    # ✅ GET → show page
+    if request.method == "GET":
+        return render_template("login.html")
+
+    # ✅ POST → handle login
     try:
         data = request.form
 
@@ -62,6 +75,9 @@ def login():
         password = data.get("password")
 
         conn = get_db_connection()
+        if not conn:
+            return jsonify({"status": "error", "message": "DB connection failed"})
+
         cursor = conn.cursor(dictionary=True)
 
         query = "SELECT * FROM students WHERE email=%s AND password=%s"
@@ -86,14 +102,14 @@ def login():
 @app.route("/dashboard")
 def dashboard():
     if "user_id" not in session:
-        return redirect(url_for("home"))
+        return redirect(url_for("login"))
     return render_template("dashboard.html")
 
 # ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("home"))
+    return redirect(url_for("login"))
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
