@@ -25,7 +25,7 @@ db_config = {
     'host': os.getenv('mysql-3cda7efb-lcseb02santhoshs-effd.a.aivencloud.com'),
     'port': int(os.getenv('11729', 3306)),
     'user': os.getenv('avnadmin'),
-    'password': os.getenv('DB_PASSWORD'),
+    'password': os.getenv('AVNS_dQg4QUj5fjft44jzL17'),
     'database': os.getenv('defaultdb'),
     'ssl_disabled': False  # Aiven requires SSL
 }
