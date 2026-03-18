@@ -1,115 +1,22 @@
-/**
- * EduVault - College Notes Portal
- * Modern JavaScript Framework
- */
-
-// ===== CONFIGURATION =====
-
 const CONFIG = {
     API_BASE: '/api',
     TIMEOUT: 5000,
 };
 
-// ===== UTILITIES =====
-
-function showNotification(message, type = 'info', duration = 3000) {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type}`;
-    notification.innerHTML = `<span>${message}</span>`;
-    notification.style.position = 'fixed';
-    notification.style.bottom = '2rem';
-    notification.style.right = '2rem';
-    notification.style.zIndex = '1000';
-
-    document.body.appendChild(notification);
-
-    if (duration > 0) {
-        setTimeout(() => notification.remove(), duration);
-    }
-
-    return notification;
+// ===== NOTIFICATION =====
+function showNotification(msg, type = 'info') {
+    alert(msg); // simple for stability
 }
 
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+// ===== FETCH =====
+async function fetchAPI(url, options = {}) {
+    const res = await fetch(url, options);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error');
+    return data;
 }
 
-function truncateText(text, length = 100) {
-    return text && text.length > length ? text.substring(0, length) + '...' : text;
-}
-
-function escapeHtml(unsafe) {
-    return unsafe
-        ? unsafe.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-        : '';
-}
-
-// ===== FETCH WITH TIMEOUT =====
-
-async function fetchWithTimeout(url, options = {}) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), CONFIG.TIMEOUT);
-
-    const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-    });
-
-    clearTimeout(id);
-    return response;
-}
-
-// ===== API FUNCTIONS =====
-
-async function fetchNotes() {
-    const res = await fetchWithTimeout(`${CONFIG.API_BASE}/notes`);
-    return await res.json();
-}
-
-async function uploadNote(formData) {
-    const res = await fetchWithTimeout(`${CONFIG.API_BASE}/upload`, {
-        method: 'POST',
-        body: formData
-    });
-    return await res.json();
-}
-
-async function deleteNote(id) {
-    const res = await fetchWithTimeout(`${CONFIG.API_BASE}/delete/${id}`, {
-        method: 'DELETE'
-    });
-    return await res.json();
-}
-
-// ===== DISPLAY =====
-
-function displayNotes(notes) {
-    const container = document.getElementById('notesGrid');
-    if (!container) return;
-
-    container.innerHTML = notes.map(note => `
-        <div class="note-card">
-            <h3>${escapeHtml(note.title)}</h3>
-            <p>${escapeHtml(note.description || '')}</p>
-            <button onclick="handleDeleteNote(${note.id})">Delete</button>
-        </div>
-    `).join('');
-}
-
-// ===== DELETE =====
-
-async function handleDeleteNote(id) {
-    if (!confirm('Delete note?')) return;
-
-    await deleteNote(id);
-    location.reload();
-}
-
-// ===== LOGIN FIXED 🔥 =====
-
+// ===== LOGIN =====
 function initializeLoginForm() {
     const form = document.getElementById('loginForm');
     if (!form) return;
@@ -117,48 +24,102 @@ function initializeLoginForm() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value.trim();
-
-        if (!email || !password) {
-            showNotification('Fill all fields', 'error');
-            return;
-        }
-
-        const btn = form.querySelector('button');
-        btn.disabled = true;
-        btn.innerText = 'Loading...';
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
         try {
-            const res = await fetch('/api/login', {
+            await fetchAPI('/api/login', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ email, password })
             });
 
-            const data = await res.json();
+            localStorage.setItem('studentName', email);
 
-            if (!res.ok) throw new Error(data.error);
-
-            localStorage.setItem('studentName', email.split('@')[0]);
-
-            showNotification('Login success', 'success');
-
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 800);
+            window.location.href = '/dashboard';
 
         } catch (err) {
-            showNotification('Login failed', 'error');
+            showNotification(err.message, 'error');
         }
-
-        btn.disabled = false;
-        btn.innerText = 'Login';
     });
 }
 
-// ===== INIT =====
+// ===== LOAD NOTES =====
+async function loadNotes() {
+    const container = document.getElementById('notesGrid');
+    if (!container) return;
 
+    try {
+        const notes = await fetchAPI('/api/notes');
+
+        container.innerHTML = notes.map(n => `
+            <div>
+                <h3>${n.title}</h3>
+                <p>${n.description || ''}</p>
+                <a href="/api/download/${n.id}">Download</a>
+                <button onclick="deleteNote(${n.id})">Delete</button>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        container.innerHTML = "Failed to load notes";
+    }
+}
+
+// ===== UPLOAD =====
+function initializeUploadForm() {
+    const form = document.getElementById('uploadForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        try {
+            await fetchAPI('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            showNotification("Uploaded successfully");
+            window.location.href = "/notes";
+
+        } catch (err) {
+            showNotification(err.message);
+        }
+    });
+}
+
+// ===== DELETE =====
+async function deleteNote(id) {
+    if (!confirm("Delete note?")) return;
+
+    try {
+        await fetchAPI(`/api/delete/${id}`, {
+            method: 'DELETE'
+        });
+
+        loadNotes();
+
+    } catch (err) {
+        showNotification(err.message);
+    }
+}
+
+// ===== LOGOUT =====
+function logout() {
+    localStorage.clear();
+    window.location.href = "/logout";
+}
+
+// ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
     initializeLoginForm();
+    initializeUploadForm();
+    loadNotes();
 });
+
+// ===== GLOBAL =====
+window.deleteNote = deleteNote;
+window.logout = logout;
