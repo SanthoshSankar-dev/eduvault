@@ -16,10 +16,9 @@ def get_db_connection():
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME"),
-        ssl_ca="/etc/ssl/certs/ca-certificates.crt",
+        ssl_ca="ca.pem",          # ✅ IMPORTANT
         ssl_verify_cert=True
     )
-
 # ================= FILE =================
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static/uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
