@@ -14,8 +14,9 @@ def get_db_connection():
         host=os.getenv("DB_HOST"),
         port=int(os.getenv("DB_PORT", 3306)),
         user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME")
+        password=os.getenv("DB_PASSWORD"),   # ✅ FIXED
+        database=os.getenv("DB_NAME"),
+        ssl_disabled=False                   # ✅ AIVEN FIX
     )
 
 # ================= FILE =================
@@ -68,7 +69,6 @@ def upload_page():
 def view_notes():
     return render_template("view_notes.html")
 
-# 🔥 NEW PROFILE PAGE
 @app.route("/profile")
 @login_required_page
 def profile():
@@ -99,6 +99,7 @@ def login():
                    (data["email"], data["password"]))
 
     user = cursor.fetchone()
+
     cursor.close()
     conn.close()
 
@@ -190,6 +191,7 @@ def download_note(id):
                    (id, session["user_id"]))
 
     note = cursor.fetchone()
+
     cursor.close()
     conn.close()
 
@@ -200,5 +202,6 @@ def download_note(id):
     return send_file(path, as_attachment=True)
 
 
+# ================= RUN =================
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)
